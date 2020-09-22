@@ -24,6 +24,8 @@ public class LocationService extends Service {
     public LocationService() {
     }
 
+    private final int id = 000;
+
     private int TRACING_DISTANCE;
     private int SEDENTARY_TIME;
     private LocationListener listener;
@@ -49,11 +51,7 @@ public class LocationService extends Service {
                     .setContentIntent(pi)
                     .build();
 
-            startForeground(000, notification);
-        }
-
-        public void stopNotificaiton() {
-            stopThisService();
+            startForeground(id, notification);
         }
 
         public void changeTracingDistance(int tracingDistance) {
@@ -62,6 +60,10 @@ public class LocationService extends Service {
 
         public void changeSedentaryTime(int sedentaryTime) {
             SEDENTARY_TIME = sedentaryTime;
+        }
+
+        public void stop(){
+            stopForeground(id);
         }
     }
 
