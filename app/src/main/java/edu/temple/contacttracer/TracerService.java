@@ -16,42 +16,35 @@ import android.util.Log;
 
 import androidx.core.app.NotificationCompat;
 
-import java.sql.Time;
-import java.util.Date;
-import java.util.GregorianCalendar;
-
-public class LocationService extends Service {
-    public LocationService() {
+public class TracerService extends Service {
+    public TracerService() {
     }
 
-    private final int id = 000;
-
-    private int TRACING_DISTANCE;
-    private int SEDENTARY_TIME;
+    private float TRACING_DISTANCE = 2; //distance in meters
+    private long SEDENTARY_TIME = 5; //time in seconds user must be at rest for to get infected
     private LocationListener listener;
     private LocationManager lm;
-    private Location previousLocation;
     private long timeLastMoved;
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-
+        Log.d("Location Service", "Service running");
         return super.onStartCommand(intent, flags, startId);
     }
 
-    class LocationServiceBinder extends Binder {
+    class TracerServiceBinder extends Binder {
         public void showNotification() {
-            Intent intent = new Intent(LocationService.this, MainActivity.class);
-            PendingIntent pi = PendingIntent.getActivity(LocationService.this, 0, intent, 0);
+            Intent intent = new Intent(TracerService.this, MainActivity.class);
+            PendingIntent pi = PendingIntent.getActivity(TracerService.this, 0, intent, 0);
 
-            Notification notification = new NotificationCompat.Builder(LocationService.this, "LocationChannel")
+            Notification notification = new NotificationCompat.Builder(TracerService.this, getString(R.string.LocationChannelID))
                     .setSmallIcon(R.drawable.ic_launcher_background)
                     .setContentTitle("Location Currently Tracked")
                     .setContentText("This is to alert you that a service that tracks your current location is running")
                     .setContentIntent(pi)
                     .build();
-
-            startForeground(id, notification);
+            Log.d("LocationService", "Notification displayed");
+            startForeground(000, notification);
         }
 
         public void changeTracingDistance(int tracingDistance) {
@@ -63,40 +56,23 @@ public class LocationService extends Service {
         }
 
         public void stop(){
-            stopForeground(id);
+            Log.d("Location Service", "Service stopped");
+            stopForeground(true);
         }
     }
 
     @Override
-    public IBinder onBind(Intent intent) {
-        TRACING_DISTANCE = 2;
-        SEDENTARY_TIME = 300;
-
-        lm = getSystemService(LocationManager.class);
-        if(checkPermission()) {
-            previousLocation = lm.getLastKnownLocation(LocationManager.GPS_PROVIDER);
-        }
-
-        timeLastMoved = System.currentTimeMillis();
-
+    public IBinder onBind(Intent intent){
         listener = new LocationListener() {
             @Override
             public void onLocationChanged(Location location) {
-                //check if user has moved far enough to trigger reaction
-                if((int)previousLocation.distanceTo(location) >= TRACING_DISTANCE){
-                    //get current time
-                    Long currentTime = System.currentTimeMillis();
-                    if(currentTime > (timeLastMoved + SEDENTARY_TIME*1000)){
-                        //user has been at rest too long and may have been infected
-                        Log.v("Location Tracking", "User has been in location long " +
-                                "enough to get infected");
-                        timeLastMoved = currentTime;
-                    }
-                    //update previous location as user has moved far enough to reset location
-                    previousLocation = location;
-                }else{
-                    //do nothing as user has not moved far enough yet
+                //Log.v("Location Service", "Location changed");
+                long currentTime = System.currentTimeMillis();
+                if(timeLastMoved < (currentTime - SEDENTARY_TIME*1000)) {
+                    Log.v("Location Tracking", "User has been in location long " +
+                            "enough to get infected");
                 }
+                timeLastMoved = currentTime;
             }
             @Override
             public void onStatusChanged(String provider, int status, Bundle extras) {}
@@ -105,12 +81,11 @@ public class LocationService extends Service {
             @Override
             public void onProviderDisabled(String provider) {}
         };
-
-        return new LocationServiceBinder();
-    }
-
-    public void stopThisService(){
-        stopForeground(true);
+        lm = getSystemService(LocationManager.class);
+        if(checkPermission())
+            lm.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, TRACING_DISTANCE, listener);
+        timeLastMoved = System.currentTimeMillis();
+        return new TracerServiceBinder();
     }
 
     private boolean checkPermission(){
