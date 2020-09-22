@@ -3,7 +3,12 @@ package edu.temple.contacttracer;
 import android.os.Parcel;
 import android.os.Parcelable;
 
-public class UUID implements Parcelable {
+import org.json.JSONException;
+import org.json.JSONObject;
+
+public class UUID{
+    private final String IDKEY = "ID";
+    private final String CREATEDKEY = "Created";
     private String id;
     private long created;
 
@@ -12,22 +17,10 @@ public class UUID implements Parcelable {
         created = System.currentTimeMillis();
     }
 
-    protected UUID(Parcel in) {
-        id = in.readString();
-        created = in.readLong();
+    public UUID(JSONObject jsonObject) throws JSONException {
+        id = jsonObject.getString(IDKEY);
+        created = jsonObject.getLong(CREATEDKEY);
     }
-
-    public static final Creator<UUID> CREATOR = new Creator<UUID>() {
-        @Override
-        public UUID createFromParcel(Parcel in) {
-            return new UUID(in);
-        }
-
-        @Override
-        public UUID[] newArray(int size) {
-            return new UUID[size];
-        }
-    };
 
     public boolean olderThan14Days(){
         return created < System.currentTimeMillis()*14*24*60*60*1000;
@@ -37,14 +30,10 @@ public class UUID implements Parcelable {
         return created > System.currentTimeMillis()*14*24*60*60*1000;
     }
 
-    @Override
-    public int describeContents() {
-        return 0;
-    }
-
-    @Override
-    public void writeToParcel(Parcel dest, int flags) {
-        dest.writeString(id);
-        dest.writeLong(created);
+    public JSONObject toJSON() throws JSONException {
+        JSONObject toReturn = new JSONObject();
+        toReturn.put(IDKEY, id);
+        toReturn.put(CREATEDKEY, created);
+        return toReturn;
     }
 }
