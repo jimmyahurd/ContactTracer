@@ -34,6 +34,7 @@ public class TracerService extends Service {
 
     class TracerServiceBinder extends Binder {
         public void showNotification() {
+
             Intent intent = new Intent(TracerService.this, MainActivity.class);
             PendingIntent pi = PendingIntent.getActivity(TracerService.this, 0, intent, 0);
 
@@ -43,7 +44,7 @@ public class TracerService extends Service {
                     .setContentText("This is to alert you that a service that tracks your current location is running")
                     .setContentIntent(pi)
                     .build();
-            Log.d("LocationService", "Notification displayed");
+
             startForeground(000, notification);
         }
 

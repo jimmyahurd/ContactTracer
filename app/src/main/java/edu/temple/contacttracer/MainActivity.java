@@ -2,9 +2,11 @@ package edu.temple.contacttracer;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.NotificationCompat;
 import androidx.fragment.app.Fragment;
 
 import android.Manifest;
+import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.content.ComponentName;
@@ -19,16 +21,11 @@ import android.util.Log;
 import android.widget.Toast;
 
 import java.util.ArrayList;
-import java.util.UUID;
 
 public class MainActivity extends AppCompatActivity implements StartupFragment.StartupFragmentListener {
 
     private final String UUIDKEY = "UUID";
-    private final String TIMEKEY = "Times";
-    private ArrayList<String> UUIDs;
-    private ArrayList<Long> UUIDtimes;
-
-    private boolean locationServiceRunning;
+    private ArrayList<edu.temple.contacttracer.UUID> UUIDs;
 
     Fragment fragment;
 
@@ -42,19 +39,12 @@ public class MainActivity extends AppCompatActivity implements StartupFragment.S
             requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 111);
         }
         if(savedInstanceState == null){
-            UUIDs = new ArrayList<String>();
-            UUIDtimes = new ArrayList<Long>();
-            UUIDs.add(UUID.randomUUID().toString());
-            UUIDtimes.add(System.currentTimeMillis());
+            UUIDs = new ArrayList<UUID>();
+            UUIDs.add(new UUID());
         }else{
-            String[] ids = savedInstanceState.getStringArray(UUIDKEY);
-            long[] times = savedInstanceState.getLongArray(TIMEKEY);
-            UUIDs = new ArrayList<String>(ids.length*2);
-            UUIDtimes = new ArrayList<Long>(times.length*2);
-            for(int i = 0; i < ids.length; i++){
-                UUIDs.add(ids[i]);
-                UUIDtimes.add(times[i]);
-            }
+            UUIDs = savedInstanceState.getParcelableArrayList(UUIDKEY);
+            while(UUIDs.get(0).olderThan14Days()) UUIDs.remove(0);
+            if(!UUIDs.get(UUIDs.size() - 1).youngerThan1Day()) UUIDs.add(new UUID());
         }
         NotificationManager nm = getSystemService(NotificationManager.class);
         NotificationChannel channel = new NotificationChannel(getString(R.string.LocationChannelID), "All Notifications", NotificationManager.IMPORTANCE_HIGH);
@@ -81,15 +71,7 @@ public class MainActivity extends AppCompatActivity implements StartupFragment.S
 
     @Override
     public void onSaveInstanceState(@NonNull Bundle outState, @NonNull PersistableBundle outPersistentState) {
-        long[] times = new long[UUIDtimes.size()];
-        String[] ids = new String[UUIDs.size()];
-        UUIDs.toArray(ids);
-        for(int i = 0; i < UUIDtimes.size(); i++){
-            times[i] = UUIDtimes.get(i);
-        }
-
-        outPersistentState.putLongArray(TIMEKEY, times);
-        outPersistentState.putStringArray(UUIDKEY, ids);
+        outState.putParcelableArrayList(UUIDKEY, UUIDs);
         super.onSaveInstanceState(outState, outPersistentState);
     }
 
