@@ -47,7 +47,7 @@ public class TracerService extends Service {
                     .setContentIntent(pi)
                     .build();
 
-            startForeground(000, notification);
+            startForeground(001, notification);
         }
 
         public void changeTracingDistance(float tracingDistance) {
