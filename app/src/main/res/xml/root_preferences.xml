@@ -1,0 +1,31 @@
+<PreferenceScreen xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <SeekBarPreference
+        android:key="@string/TracingDistancePreference"
+        android:title="Tracing Distance"
+        android:summary="Set minimum tracing distance for app"
+        android:defaultValue="2"
+        app:min="1"
+        android:max="10"
+        app:seekBarIncrement="1"
+        app:showSeekBarValue="true"
+        />
+
+    <SeekBarPreference
+        android:key="@string/SedentaryTimePreference"
+        android:title="Sedentary Time"
+        android:summary="Set minimum resting time for possible infection"
+        android:defaultValue="300"
+        app:min="10"
+        android:max="600"
+        app:seekBarIncrement="5"
+        app:showSeekBarValue="true"
+        />
+
+    <Preference
+        android:key="@string/NewUUIDPreference"
+        android:summary="Generate a new UUID"
+        android:title="New UUID" />
+
+</PreferenceScreen>

@@ -4,4 +4,9 @@
     <string name="Button1Name">Start Service</string>
     <string name="Button2Name">Stop Service</string>
     <string name="LocationChannelID">LocationChannel</string>
+
+    <string name="TracingDistancePreference">TracingDistance</string>
+    <string name="SedentaryTimePreference">SedentaryTime</string>
+    <string name="NewUUIDPreference">UUID</string>
+    <string name="Menu.Settings">Settings</string>
 </resources>

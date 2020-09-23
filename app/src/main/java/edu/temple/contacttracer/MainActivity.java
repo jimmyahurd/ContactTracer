@@ -4,6 +4,8 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.NotificationCompat;
 import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentActivity;
+import androidx.preference.PreferenceManager;
 
 import android.Manifest;
 import android.app.Notification;
@@ -13,11 +15,15 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.os.PersistableBundle;
 import android.util.Log;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.widget.Toast;
 
 import org.json.JSONArray;
@@ -31,12 +37,12 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 
-public class MainActivity extends AppCompatActivity implements StartupFragment.StartupFragmentListener {
-
-    private final String UUIDKEY = "UUID";
+public class MainActivity extends AppCompatActivity implements StartupFragment.StartupFragmentListener, SettingsFragment.SettingsListener {
     private ArrayList<edu.temple.contacttracer.UUID> UUIDs;
 
-    Fragment fragment;
+    Fragment startupFragment;
+    SharedPreferences preferences;
+    SharedPreferences.OnSharedPreferenceChangeListener listener;
 
     TracerService.TracerServiceBinder lsBinder;
 
@@ -44,19 +50,67 @@ public class MainActivity extends AppCompatActivity implements StartupFragment.S
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
         if(!checkPermission()){
             requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 111);
         }
         getUUIDs();
+
         NotificationManager nm = getSystemService(NotificationManager.class);
         NotificationChannel channel = new NotificationChannel(getString(R.string.LocationChannelID), "All Notifications", NotificationManager.IMPORTANCE_HIGH);
         nm.createNotificationChannel(channel);
 
-        fragment = StartupFragment.newInstance();
-        getSupportFragmentManager()
-                .beginTransaction()
-                .add(R.id.fragmentContainer, fragment)
-                .commit();
+        makePreferenceListener();
+
+        startupFragment = getSupportFragmentManager().findFragmentById(R.id.fragmentContainer);
+        if(!(startupFragment instanceof StartupFragment)){
+            startupFragment = StartupFragment.newInstance();
+            getSupportFragmentManager()
+                    .beginTransaction()
+                    .add(R.id.fragmentContainer, startupFragment)
+                    .commit();
+        }
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        MenuInflater inflater = getMenuInflater();
+        inflater.inflate(R.menu.menu, menu);
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(@NonNull MenuItem item) {
+        if(item.getItemId() == R.id.settings) {
+            Fragment settings = new SettingsFragment();
+            getSupportFragmentManager()
+                    .beginTransaction()
+                    .replace(R.id.fragmentContainer, settings)
+                    .addToBackStack(null)
+                    .commit();
+            return true;
+        }
+        return super.onOptionsItemSelected(item);
+    }
+
+    public void makePreferenceListener(){
+        preferences = PreferenceManager.getDefaultSharedPreferences(this);
+        listener = new SharedPreferences.OnSharedPreferenceChangeListener() {
+            @Override
+            public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
+                if(key.equals(getString(R.string.TracingDistancePreference))){
+                    float tracingDistance = (float)sharedPreferences.getInt(getString(R.string.TracingDistancePreference), 2);
+                    if(lsBinder != null)
+                        lsBinder.changeTracingDistance(tracingDistance);
+                }
+                if(key.equals(getString(R.string.SedentaryTimePreference))){
+                    long sedentaryTime = (long)sharedPreferences.getInt(getString(R.string.SedentaryTimePreference), 300);
+                    if(lsBinder != null)
+                        lsBinder.changeSedentaryTime(sedentaryTime);
+                }
+            }
+        };
+        preferences.registerOnSharedPreferenceChangeListener(listener);
     }
 
     private void getUUIDs(){
@@ -138,7 +192,14 @@ public class MainActivity extends AppCompatActivity implements StartupFragment.S
     public void startServiceButtonPressed() {
         //start foreground service
         Log.d("Main", "Start service button pressed");
+
+        SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
+        float tracingDistance = (float)sharedPreferences.getInt(getString(R.string.TracingDistancePreference), 2);
+        long sedentaryTime = (long)sharedPreferences.getInt(getString(R.string.SedentaryTimePreference), 300);
+
         Intent intent = new Intent(this, TracerService.class);
+        intent.putExtra(getString(R.string.TracingDistancePreference), tracingDistance);
+        intent.putExtra(getString(R.string.SedentaryTimePreference), sedentaryTime);
         bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE);
         startService(intent);
     }
@@ -172,5 +233,11 @@ public class MainActivity extends AppCompatActivity implements StartupFragment.S
             lsBinder = null;
         }
         Log.d("Main", "Stop Service Button Pressed");
+    }
+
+    @Override
+    public void generateUUID() {
+        Log.d("Main", "New UUID generated");
+        UUIDs.add(new UUID());
     }
 }

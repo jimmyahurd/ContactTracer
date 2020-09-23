@@ -5,6 +5,7 @@ import android.app.Notification;
 import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.location.Location;
 import android.location.LocationListener;
@@ -15,13 +16,14 @@ import android.os.IBinder;
 import android.util.Log;
 
 import androidx.core.app.NotificationCompat;
+import androidx.preference.PreferenceManager;
 
 public class TracerService extends Service {
     public TracerService() {
     }
 
-    private float TRACING_DISTANCE = 2; //distance in meters
-    private long SEDENTARY_TIME = 5; //time in seconds user must be at rest for to get infected
+    private float TRACING_DISTANCE; //distance in meters
+    private long SEDENTARY_TIME; //time in seconds user must be at rest for to get infected
     private LocationListener listener;
     private LocationManager lm;
     private long timeLastMoved;
@@ -48,11 +50,15 @@ public class TracerService extends Service {
             startForeground(000, notification);
         }
 
-        public void changeTracingDistance(int tracingDistance) {
+        public void changeTracingDistance(float tracingDistance) {
+            Log.d("Location Service", "Changing Tracing distance from " + TRACING_DISTANCE
+            + " to " + tracingDistance);
             TRACING_DISTANCE = tracingDistance;
         }
 
-        public void changeSedentaryTime(int sedentaryTime) {
+        public void changeSedentaryTime(long sedentaryTime) {
+            Log.d("Location Service", "Changing sedentary time from " + SEDENTARY_TIME
+                    + " to " + sedentaryTime);
             SEDENTARY_TIME = sedentaryTime;
         }
 
@@ -64,6 +70,9 @@ public class TracerService extends Service {
 
     @Override
     public IBinder onBind(Intent intent){
+        TRACING_DISTANCE = intent.getFloatExtra(getString(R.string.TracingDistancePreference), 2);
+        SEDENTARY_TIME = intent.getLongExtra(getString(R.string.SedentaryTimePreference), 300);
+
         listener = new LocationListener() {
             @Override
             public void onLocationChanged(Location location) {
