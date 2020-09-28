@@ -27,7 +27,7 @@ public class UUID{
     }
 
     public boolean youngerThan1Day(){
-        return created > System.currentTimeMillis()*14*24*60*60*1000;
+        return created > System.currentTimeMillis()*24*60*60*1000;
     }
 
     public JSONObject toJSON() throws JSONException {
