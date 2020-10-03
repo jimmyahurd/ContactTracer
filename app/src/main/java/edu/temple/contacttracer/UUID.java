@@ -1,12 +1,11 @@
 package edu.temple.contacttracer;
 
-import android.os.Parcel;
-import android.os.Parcelable;
-
 import org.json.JSONException;
 import org.json.JSONObject;
 
-public class UUID{
+import java.io.Serializable;
+
+public class UUID implements Serializable {
     private final String IDKEY = "ID";
     private final String CREATEDKEY = "Created";
     private String id;
@@ -23,11 +22,11 @@ public class UUID{
     }
 
     public boolean olderThan14Days(){
-        return created < (System.currentTimeMillis() - 14*24*60*60*1000);
+        return created < (System.currentTimeMillis() - (14*24*60*60*1000));
     }
 
     public boolean youngerThan1Day(){
-        return created > (System.currentTimeMillis() - 1*24*60*60*1000);
+        return created > (System.currentTimeMillis() - (1*24*60*60*1000));
     }
 
     public JSONObject toJSON() throws JSONException {

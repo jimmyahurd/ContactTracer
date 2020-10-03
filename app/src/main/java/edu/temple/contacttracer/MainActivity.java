@@ -26,15 +26,25 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.widget.Toast;
 
+import com.google.android.gms.tasks.OnCompleteListener;
+import com.google.android.gms.tasks.Task;
+import com.google.firebase.messaging.FirebaseMessaging;
+
 import org.json.JSONArray;
 import org.json.JSONException;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.OutputStreamWriter;
 import java.util.ArrayList;
 
 public class MainActivity extends AppCompatActivity implements StartupFragment.StartupFragmentListener, SettingsFragment.SettingsListener {
@@ -54,7 +64,18 @@ public class MainActivity extends AppCompatActivity implements StartupFragment.S
         if(!checkPermission()){
             requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 111);
         }
-        getUUIDs();
+
+        FirebaseMessaging.getInstance().subscribeToTopic("TRACKING")
+                .addOnCompleteListener(new OnCompleteListener<Void>() {
+                    @Override
+                    public void onComplete(@NonNull Task<Void> task) {
+                        String msg = "Subscribed to topic";
+                        if (!task.isSuccessful()) {
+                            msg = "Failed to subscribe to topic";
+                        }
+                        Log.d("Main", msg);
+                    }
+                });
 
         NotificationManager nm = getSystemService(NotificationManager.class);
         NotificationChannel channel = new NotificationChannel(getString(R.string.LocationChannelID), "All Notifications", NotificationManager.IMPORTANCE_HIGH);
@@ -123,31 +144,40 @@ public class MainActivity extends AppCompatActivity implements StartupFragment.S
             try {
                 if (file.exists()) {
                     String path = file.getPath();
-                    BufferedReader reader = new BufferedReader(new FileReader(path));
-                    String response;
-                    StringBuilder builder = new StringBuilder();
-                    while ((response = reader.readLine()) != null) {
-                        builder.append(response);
-                    }
-                    JSONArray jsonArray = new JSONArray(builder.toString());
-                    UUIDs = new ArrayList<UUID>(jsonArray.length() + 1);
-                    for (int i = 0; i < jsonArray.length(); i++) {
-                        UUID id = new UUID(jsonArray.getJSONObject(i));
-                        if(!id.olderThan14Days())
-                            UUIDs.add(id);
-                    }
-                    if(!UUIDs.get(UUIDs.size() - 1).youngerThan1Day())
-                        UUIDs.add(new UUID());
-                    Log.d("Main", "Grabbed UUIDs from file");
-                    reader.close();
+                    ObjectInputStream inputStream = new ObjectInputStream(new FileInputStream(path));
+                    UUIDs = (ArrayList<UUID>)inputStream.readObject();
+                    while(UUIDs.get(0).olderThan14Days()) UUIDs.remove(0);
+                    if(!UUIDs.get(UUIDs.size() - 1).youngerThan1Day()) UUIDs.add(new UUID());
+                    inputStream.close();
                 }
             } catch (IOException e) {
                 e.printStackTrace();
-            } catch (JSONException e) {
+            } catch (ClassNotFoundException e) {
                 e.printStackTrace();
                 file.delete();
                 Log.e("Main", "file deleted");
             }
+        }
+        Log.d("Main", "Have " + UUIDs.size() + " UUIDs");
+    }
+
+    private void saveUUIDs(){
+        try {
+            Log.d("Main", "Writing to file");
+            File file = new File(getFilesDir(), getString(R.string.UUIDFileName));
+            if(!file.exists())
+                file.createNewFile();
+            String path = file.getPath();
+            ObjectOutputStream writer = new ObjectOutputStream(new FileOutputStream(path));
+
+            writer.writeObject(UUIDs);
+
+            writer.flush();
+            writer.close();
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 
@@ -164,34 +194,11 @@ public class MainActivity extends AppCompatActivity implements StartupFragment.S
     }
 
     @Override
-    protected void onStop() {
-        super.onStop();
-
-        try {
-            Log.d("Main", "Writing to file");
-            File file = new File(getFilesDir(), getString(R.string.UUIDFileName));
-            if(!file.exists())
-                file.createNewFile();
-            String path = file.getPath();
-            BufferedWriter writer = new BufferedWriter(new FileWriter(path));
-
-            JSONArray jsonArray = new JSONArray();
-            for(UUID id : UUIDs){
-                jsonArray.put(id.toJSON());
-            }
-            writer.write(jsonArray.toString());
-            writer.flush();
-            writer.close();
-
-        } catch (IOException | JSONException e) {
-            e.printStackTrace();
-        }
-    }
-
-    @Override
     public void startServiceButtonPressed() {
         //start foreground service
         Log.d("Main", "Start service button pressed");
+
+        getUUIDs();
 
         SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
         float tracingDistance = (float)sharedPreferences.getInt(getString(R.string.TracingDistancePreference), 2);
@@ -232,6 +239,7 @@ public class MainActivity extends AppCompatActivity implements StartupFragment.S
             unbindService(serviceConnection);
             lsBinder = null;
         }
+        saveUUIDs();
         Log.d("Main", "Stop Service Button Pressed");
     }
 
