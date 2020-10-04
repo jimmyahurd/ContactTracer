@@ -29,6 +29,10 @@ public class UUID implements Serializable {
         return created > (System.currentTimeMillis() - (1*24*60*60*1000));
     }
 
+    public String getID(){
+        return id;
+    }
+
     public JSONObject toJSON() throws JSONException {
         JSONObject toReturn = new JSONObject();
         toReturn.put(IDKEY, id);

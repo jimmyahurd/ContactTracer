@@ -1,6 +1,6 @@
 <resources>
     <string name="app_name">ContactTracer</string>
-    <string name="UUIDFileName">file</string>
+    <string name="DataFileName">file</string>
     <string name="Button1Name">Start Service</string>
     <string name="Button2Name">Stop Service</string>
     <string name="LocationChannelID">LocationChannel</string>
@@ -9,4 +9,11 @@
     <string name="SedentaryTimePreference">SedentaryTime</string>
     <string name="NewUUIDPreference">UUID</string>
     <string name="Menu.Settings">Settings</string>
+
+    <string name="FCM_URL">https://kamorris.com/lab/ct_tracking.php</string>
+    <string name="PayloadUUID">uuid</string>
+    <string name="PayloadLatitude">latitude</string>
+    <string name="PayloadLongitude">longitude</string>
+    <string name="PayloadTimeBegin">sedentary_begin</string>
+    <string name="PayloadTimeEnd">sedentary_end</string>
 </resources>
