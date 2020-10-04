@@ -4,6 +4,10 @@ import android.app.Application;
 import android.location.Location;
 import android.util.Log;
 
+import androidx.work.ExistingPeriodicWorkPolicy;
+import androidx.work.PeriodicWorkRequest;
+import androidx.work.WorkManager;
+
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -15,6 +19,7 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 public class ContactTracerApplicationContext extends Application implements UUIDtracker{
     protected Set<UUID> UUIDs;
@@ -30,9 +35,16 @@ public class ContactTracerApplicationContext extends Application implements UUID
     public void onCreate() {
         super.onCreate();
         readFromFile();
+        PeriodicWorkRequest dataCleaning =
+                new PeriodicWorkRequest.Builder(dataCleaner.class,
+                        1, TimeUnit.DAYS).build();
+        WorkManager.getInstance(this).enqueueUniquePeriodicWork(
+                "Data Cleaning",
+                ExistingPeriodicWorkPolicy.KEEP,
+                dataCleaning);
     }
 
-    private void readFromFile() {
+    public void readFromFile() {
         File file = new File(getFilesDir(), getString(R.string.DataFileName));
         if(file.length() == 0){
             Log.d("Application Context", "Created first UUID");
@@ -72,7 +84,7 @@ public class ContactTracerApplicationContext extends Application implements UUID
         Log.d("Application Context", "Have " + UUIDs.size() + " UUIDs");
     }
 
-    private void writeToFile(){
+    public void writeToFile(){
         File file = new File(getFilesDir(), getString(R.string.DataFileName));
         try {
             String path = file.getPath();
@@ -122,12 +134,12 @@ public class ContactTracerApplicationContext extends Application implements UUID
     }
 
     private boolean checkContact(JSONObject location) throws JSONException {
-        if(ids.contains(location.getString(getString(R.string.PayloadUUID)))){
-            Log.d("Application Context" ,"Contact ignored as message was sent by me");
-            return false;
-        }
         if(currentLocation == null) {
             Log.d("Application Context", "Unable to track current location");
+            return false;
+        }
+        if(ids.contains(location.getString(getString(R.string.PayloadUUID)))){
+            Log.d("Application Context" ,"Contact ignored as message was sent by me");
             return false;
         }
         try {
@@ -177,7 +189,6 @@ public class ContactTracerApplicationContext extends Application implements UUID
     @Override
     public void setCurrentLocation(Location location) {
         currentLocation = location;
-        writeToFile();
     }
 
     @Override
@@ -191,5 +202,24 @@ public class ContactTracerApplicationContext extends Application implements UUID
             myLocations = new HashSet<>();
         myLocations.add(new myLocation(location));
         writeToFile();
+    }
+
+    @Override
+    public Set<myLocation> getMyLocations(){
+        return myLocations;
+    }
+
+    @Override
+    public void cleanData(){
+        readFromFile();
+        for(UUID id : UUIDs){
+            if(id.olderThan14Days())
+                UUIDs.remove(id);
+        }
+        for(myLocation location : myLocations){
+            if(location.olderThan14Days())
+                myLocations.remove(location);
+        }
+        addID(); //method will write all changes to file
     }
 }

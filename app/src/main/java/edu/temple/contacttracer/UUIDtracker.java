@@ -9,6 +9,8 @@ import java.util.ArrayList;
 import java.util.Set;
 
 public interface UUIDtracker {
+    void cleanData();
+
     void addID();
     Set<UUID> getIDs();
     String getCurrentID();
@@ -26,4 +28,5 @@ public interface UUIDtracker {
     Location getCurrentLocation();
 
     void addLocation(Location location);
+    Set<myLocation> getMyLocations();
 }
