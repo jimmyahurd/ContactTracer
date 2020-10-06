@@ -79,6 +79,10 @@ public class TracerService extends Service {
             public void onLocationChanged(Location location) {
                 UUIDtracker application = (UUIDtracker)getApplicationContext();
                 //Log.d("Location Service", application.getSedentaryTime() + " " + application.getTracingDistance());
+                if(application.getCurrentLocation() == null){
+                    application.setCurrentLocation(location);
+                    return;
+                }
                 if(application.getCurrentLocation().distanceTo(location) < application.getTracingDistance()){
                     return;
                 }
@@ -111,7 +115,7 @@ public class TracerService extends Service {
 
     private void sendToServer(){
         RequestQueue queue = Volley.newRequestQueue(this);
-        String url = getString(R.string.FCM_URL);
+        String url = getString(R.string.FCM_Tracking_URL);
 
         StringRequest request = new StringRequest(Request.Method.POST, url,
                 new Response.Listener<String>() {

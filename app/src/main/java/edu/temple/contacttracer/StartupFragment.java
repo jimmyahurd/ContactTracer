@@ -44,6 +44,12 @@ public class StartupFragment extends Fragment {
                 mListener.stopServiceButtonPressed();
             }
         });
+        view.findViewById(R.id.positiveTestButton).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                mListener.positiveTestButtonPressed();
+            }
+        });
         return view;
     }
 
@@ -69,5 +75,6 @@ public class StartupFragment extends Fragment {
         // TODO: Update argument type and name
         void startServiceButtonPressed();
         void stopServiceButtonPressed();
+        void positiveTestButtonPressed();
     }
 }

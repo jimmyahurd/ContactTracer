@@ -3,6 +3,7 @@ package edu.temple.contacttracer;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.NotificationCompat;
+import androidx.fragment.app.DialogFragment;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentActivity;
 import androidx.preference.PreferenceManager;
@@ -26,6 +27,13 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.widget.Toast;
 
+import com.android.volley.AuthFailureError;
+import com.android.volley.Request;
+import com.android.volley.RequestQueue;
+import com.android.volley.Response;
+import com.android.volley.VolleyError;
+import com.android.volley.toolbox.StringRequest;
+import com.android.volley.toolbox.Volley;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
 import com.google.firebase.messaging.FirebaseMessaging;
@@ -46,8 +54,11 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.OutputStreamWriter;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
 
-public class MainActivity extends AppCompatActivity implements StartupFragment.StartupFragmentListener, SettingsFragment.SettingsListener {
+public class MainActivity extends AppCompatActivity implements StartupFragment.StartupFragmentListener, SettingsFragment.SettingsListener, DatePickerFragment.DateSelectedListener {
     Fragment startupFragment;
     SharedPreferences preferences;
     SharedPreferences.OnSharedPreferenceChangeListener listener;
@@ -67,9 +78,20 @@ public class MainActivity extends AppCompatActivity implements StartupFragment.S
                 .addOnCompleteListener(new OnCompleteListener<Void>() {
                     @Override
                     public void onComplete(@NonNull Task<Void> task) {
-                        String msg = "Subscribed to topic";
+                        String msg = "Subscribed to tracking topic";
                         if (!task.isSuccessful()) {
-                            msg = "Failed to subscribe to topic";
+                            msg = "Failed to subscribe to tracking topic";
+                        }
+                        Log.d("Main", msg);
+                    }
+                });
+        FirebaseMessaging.getInstance().subscribeToTopic("TRACING")
+                .addOnCompleteListener(new OnCompleteListener<Void>() {
+                    @Override
+                    public void onComplete(@NonNull Task<Void> task) {
+                        String msg = "Subscribed to tracing topic";
+                        if (!task.isSuccessful()) {
+                            msg = "Failed to subscribe to tracing topic";
                         }
                         Log.d("Main", msg);
                     }
@@ -193,9 +215,53 @@ public class MainActivity extends AppCompatActivity implements StartupFragment.S
     }
 
     @Override
+    public void positiveTestButtonPressed() {
+        DialogFragment datePicker = new DatePickerFragment();
+        datePicker.show(getSupportFragmentManager(), "datePicker");
+    }
+
+    @Override
     public void generateUUID() {
         Log.d("Main", "New UUID generated");
         UUIDtracker application = (UUIDtracker)getApplicationContext();
         application.addID();
+    }
+
+    @Override
+    public void dateSelected(final long time) {
+        RequestQueue queue = Volley.newRequestQueue(this);
+        String url = getString(R.string.FCM_Tracing_URL);
+
+        StringRequest request = new StringRequest(Request.Method.POST, url,
+                new Response.Listener<String>() {
+                    @Override
+                    public void onResponse(String response) {
+                        Log.d("Main Activity", response);
+                    }
+                }, new Response.ErrorListener() {
+            @Override
+            public void onErrorResponse(VolleyError error) {
+                Log.d("Main Activity", error.toString());
+            }
+        }){
+            @Override
+            protected Map<String, String> getParams() throws AuthFailureError {
+                Map<String, String> params = new HashMap<>();
+                params.put("date", "" + time);
+
+                UUIDtracker application = (UUIDtracker) getApplicationContext();
+                Set<myLocation> locations = application.getMyLocations();
+                JSONArray array = new JSONArray();
+                for(myLocation location : locations){
+                    array.put(location.getUUID());
+                }
+                params.put("uuids", array.toString());
+
+                //Log.d("Main Activity", "Sending Message: " + params.toString());
+
+                return params;
+            }
+        };
+        queue.add(request);
     }
 }

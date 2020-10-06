@@ -200,7 +200,7 @@ public class ContactTracerApplicationContext extends Application implements UUID
     public void addLocation(Location location) {
         if(myLocations == null)
             myLocations = new HashSet<>();
-        myLocations.add(new myLocation(location));
+        myLocations.add(new myLocation(location, currentID.getID()));
         writeToFile();
     }
 

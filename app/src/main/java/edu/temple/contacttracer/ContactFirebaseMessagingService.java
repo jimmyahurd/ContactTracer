@@ -20,15 +20,24 @@ public class ContactFirebaseMessagingService extends FirebaseMessagingService {
     @Override
     public void onMessageReceived(@NonNull RemoteMessage remoteMessage) {
         Log.d("FCM", "Received message from server");
-        try {
-            JSONObject payload = new JSONObject(remoteMessage.getData().get("payload"));
-            Log.d("FCM", "Received " + payload + " from server");
-            UUIDtracker applicationContext = (UUIDtracker) getApplicationContext();
-            if(applicationContext.addContact(payload)) {
-                Log.d("FCM", "Successfully added new contact");
+        if(remoteMessage.getFrom().equals("/topics/TRACKING")) {
+            try {
+                JSONObject payload = new JSONObject(remoteMessage.getData().get("payload"));
+                Log.d("FCM", "Received " + payload + " from server");
+                UUIDtracker applicationContext = (UUIDtracker) getApplicationContext();
+                if (applicationContext.addContact(payload)) {
+                    Log.d("FCM", "Successfully added new contact");
+                }
+            } catch (JSONException e) {
+                e.printStackTrace();
             }
-        } catch (JSONException e) {
-            e.printStackTrace();
+        }else if(remoteMessage.getFrom().equals("/topics/TRACING")){
+            try {
+                JSONObject payload = new JSONObject(remoteMessage.getData().get("payload"));
+                Log.d("FCM", "Received " + payload + " from server");
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
         }
         super.onMessageReceived(remoteMessage);
     }
