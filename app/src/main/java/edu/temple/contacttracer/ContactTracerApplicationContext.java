@@ -26,7 +26,7 @@ public class ContactTracerApplicationContext extends Application implements UUID
     protected Set<UUID> UUIDs;
     protected UUID currentID;
     protected Set<String> ids;
-    protected Set<JSONObject> contacts;
+    protected Set<Contact> contacts;
     protected Set<myLocation> myLocations;
     protected float TRACING_DISTANCE;
     protected long SEDENTARY_TIME;
@@ -69,7 +69,7 @@ public class ContactTracerApplicationContext extends Application implements UUID
                 for(UUID id: UUIDs)
                     ids.add(id.getID());
                 currentID = (UUID)inputStream.readObject();
-                contacts = (Set<JSONObject>)inputStream.readObject();
+                contacts = (Set<Contact>)inputStream.readObject();
                 myLocations = (Set<myLocation>)inputStream.readObject();
                 TRACING_DISTANCE = inputStream.readFloat();
                 Log.d("Application Context", "" + TRACING_DISTANCE);
@@ -125,12 +125,10 @@ public class ContactTracerApplicationContext extends Application implements UUID
 
     @Override
     public boolean addContact(JSONObject contact) throws JSONException {
-        if(contacts.isEmpty())
-            contacts.add(contact);
         if(checkContact(contact)) {
             if(contacts == null)
                 contacts = new HashSet<>();
-            contacts.add(contact);
+            contacts.add(new Contact(contact));
             writeToFile();
             return true;
         }else{
@@ -165,8 +163,12 @@ public class ContactTracerApplicationContext extends Application implements UUID
     }
 
     @Override
-    public Set<JSONObject> getContacts() {
-        return contacts;
+    public Set<JSONObject> getContacts() throws JSONException {
+        Set<JSONObject> newContacts = new HashSet<>();
+        for(Contact contact : contacts){
+            newContacts.add(contact.toJSON());
+        }
+        return newContacts;
     }
 
     @Override
@@ -174,12 +176,12 @@ public class ContactTracerApplicationContext extends Application implements UUID
         if(this.ids.contains(ids.getString(0))){
             Log.d("Application Context", "Message ignored as sent by me");
         }
-        for(JSONObject contact: contacts){
-            String contactID = contact.getString(getString(R.string.PayloadUUID));
+        for(Contact contact : contacts){
+            String contactID = contact.toJSON().getString(getString(R.string.PayloadUUID));
             for(int i = 0; i < ids.length(); i++){
                 if(contactID.equals(ids.getString(i))){
                     Log.d("Application Context", "Possible Exposure!");
-                    return contact;
+                    return contact.toJSON();
                 }
             }
         }

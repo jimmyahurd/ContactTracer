@@ -6,6 +6,7 @@ import androidx.core.app.NotificationCompat;
 import androidx.fragment.app.DialogFragment;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentActivity;
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import androidx.preference.PreferenceManager;
 
 import android.Manifest;
@@ -72,6 +73,7 @@ public class MainActivity extends AppCompatActivity implements StartupFragment.S
     BroadcastReceiver br = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
+            Log.d("Main Activity", "Got Broadcast");
             try {
                 JSONObject contact = new JSONObject(intent.getStringExtra(getString(R.string.IntentContactExtra)));
                 double latitude = contact.getDouble(getString(R.string.PayloadLatitude));
@@ -239,10 +241,12 @@ public class MainActivity extends AppCompatActivity implements StartupFragment.S
         super.onResume();
         Intent intent = new Intent(this, TracerService.class);
         bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE);
-        ((UUIDtracker)getApplicationContext()).inForeground();
+
+        ((UUIDtracker)getApplicationContext()).nowInForeground();
+
         IntentFilter filter = new IntentFilter();
         filter.addAction(getString(R.string.IntentDisplayContact));
-        registerReceiver(br, filter);
+        LocalBroadcastManager.getInstance(this).registerReceiver(br, filter);
     }
 
     @Override
@@ -250,8 +254,9 @@ public class MainActivity extends AppCompatActivity implements StartupFragment.S
         super.onPause();
         if(lsBinder != null)
             unbindService(serviceConnection);
+
         ((UUIDtracker)getApplicationContext()).outOfForeground();
-        unregisterReceiver(br);
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(br);
     }
 
     @Override

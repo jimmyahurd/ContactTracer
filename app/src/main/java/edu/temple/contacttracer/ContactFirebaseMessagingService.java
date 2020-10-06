@@ -6,6 +6,7 @@ import android.os.IBinder;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import com.google.firebase.messaging.FirebaseMessagingService;
 import com.google.firebase.messaging.RemoteMessage;
@@ -40,12 +41,13 @@ public class ContactFirebaseMessagingService extends FirebaseMessagingService {
                 UUIDtracker application = (UUIDtracker) getApplicationContext();
                 JSONObject contact;
                 if((contact = application.checkContacts(ids)) != null){
+                    Log.d("FCM", "Found Possible contact");
                     if(application.inForeground()){
+                        Log.d("FCM", "Notifying Main Activity");
                         //broadcast to main activity
-                        Intent intent = new Intent(this, MainActivity.class);
+                        Intent intent = new Intent(getString(R.string.IntentDisplayContact));
                         intent.putExtra(getString(R.string.IntentContactExtra), contact.toString());
-                        intent.setAction(getString(R.string.IntentDisplayContact));
-                        sendBroadcast(intent);
+                        LocalBroadcastManager.getInstance(this).sendBroadcast(intent);
                     }else{
                         //notification
                     }

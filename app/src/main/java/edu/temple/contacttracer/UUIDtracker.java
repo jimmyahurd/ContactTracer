@@ -20,7 +20,7 @@ public interface UUIDtracker {
     String getCurrentID();
 
     boolean addContact(JSONObject contact) throws JSONException;
-    Set<JSONObject> getContacts();
+    Set<JSONObject> getContacts() throws JSONException;
     JSONObject checkContacts(JSONArray ids) throws JSONException;
 
     void setTracingDistance(float distance);
