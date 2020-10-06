@@ -26,6 +26,7 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 
+//Fragment used to show user information relating to when they could have been exposed to COVID
 public class TraceFragment extends Fragment {
     private static final String LATITUDE_KEY = "latitude";
     private static final String LONGITUDE_KEY = "longitude";
@@ -35,6 +36,9 @@ public class TraceFragment extends Fragment {
     long time;
     MapView mapView;
 
+    //Requires a JSONObject representing a contact to function
+    //Latitude and longitude are pulled out to show the location of exposure on a map
+    //Time is pulled out to show the day and time that the exposure occurred.
     public static TraceFragment newInstance(JSONObject contact) throws JSONException {
         TraceFragment fragment = new TraceFragment();
 
@@ -51,6 +55,7 @@ public class TraceFragment extends Fragment {
         return fragment;
     }
 
+    //When map is created, it adds a marker where there was a possible exposure
     private OnMapReadyCallback callback = new OnMapReadyCallback() {
 
         /**
@@ -93,6 +98,7 @@ public class TraceFragment extends Fragment {
         mapView = view.findViewById(R.id.mapView);
         mapView.onCreate(savedInstanceState);
 
+        //Populates textview with date and time that exposure occurred
         TextView textView = view.findViewById(R.id.date);
         Instant instant = Instant.ofEpochMilli(time);
         LocalDateTime date = LocalDateTime.ofInstant(instant, ZoneId.of("America/New_York"));

@@ -4,6 +4,7 @@ import android.location.Location;
 
 import java.io.Serializable;
 
+//Data container for location where user was at rest for longer than SEDENTARY_TIME
 public class myLocation implements Serializable {
     private double latitude;
     private double longitude;

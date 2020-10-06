@@ -9,6 +9,7 @@ import org.json.JSONObject;
 import java.util.ArrayList;
 import java.util.Set;
 
+//Used by components to interaction with the application context
 public interface UUIDtracker {
     void cleanData();
     void nowInForeground();

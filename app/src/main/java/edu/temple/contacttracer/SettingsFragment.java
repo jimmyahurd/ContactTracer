@@ -11,11 +11,15 @@ import androidx.annotation.Nullable;
 import androidx.preference.Preference;
 import androidx.preference.PreferenceFragmentCompat;
 
+//Fragment used to update app preferences
 public class SettingsFragment extends PreferenceFragmentCompat {
     SettingsListener settingsListener;
 
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
+        //Preferences that are only clicked will not make a call to OnSharedPreferencesChanged(),
+        //so manually had to add an on click listener that tells Activity it is attached to to
+        //generate a new UUID immediately
         Preference newUUId = findPreference(getString(R.string.NewUUIDPreference));
         newUUId.setOnPreferenceClickListener(new Preference.OnPreferenceClickListener() {
             @Override

@@ -35,6 +35,7 @@ import org.json.JSONObject;
 import java.util.HashMap;
 import java.util.Map;
 
+//Service used to track user's location and upload to server if user has been at rest too long
 public class TracerService extends Service {
     public TracerService() {
     }
@@ -51,6 +52,7 @@ public class TracerService extends Service {
     }
 
     class TracerServiceBinder extends Binder {
+        //displays notification required for service to run in foreground
         public void showNotification() {
 
             Intent intent = new Intent(TracerService.this, MainActivity.class);
@@ -66,6 +68,7 @@ public class TracerService extends Service {
             startForeground(001, notification);
         }
 
+        //stops the service
         public void stop(){
             Log.d("Location Service", "Service stopped");
             stopForeground(true);
@@ -78,22 +81,29 @@ public class TracerService extends Service {
             @Override
             public void onLocationChanged(Location location) {
                 UUIDtracker application = (UUIDtracker)getApplicationContext();
-                //Log.d("Location Service", application.getSedentaryTime() + " " + application.getTracingDistance());
+                //If we don't know yet where the user is, then it should be updated
+                //and we should return immediately
                 if(application.getCurrentLocation() == null){
                     application.setCurrentLocation(location);
                     return;
                 }
+                //Checks if user has moved far enough according to tracing distance
+                //If not, return without updating current location or time the user last moved
                 if(application.getCurrentLocation().distanceTo(location) < application.getTracingDistance()){
                     return;
                 }
                 application.setCurrentLocation(location);
                 long currentTime = System.currentTimeMillis();
+                //Check if user has been at rest for too long
                 if(timeLastMoved < (currentTime - application.getSedentaryTime()*1000)) {
+                    //If user has been at rest too long, then add location to my local list
+                    //and upload my information to the server
                     application.addLocation(location);
                     sendToServer();
                     //Log.d("Location Tracking", "User has been in location long " +
                             //"enough to get infected");
                 }
+                //Update the last time user moved
                 timeLastMoved = currentTime;
             }
             @Override
@@ -113,6 +123,7 @@ public class TracerService extends Service {
         return new TracerServiceBinder();
     }
 
+    //Uploads location, time, and UUID of user to server when they have been at rest for too long
     private void sendToServer(){
         RequestQueue queue = Volley.newRequestQueue(this);
         String url = getString(R.string.FCM_Tracking_URL);

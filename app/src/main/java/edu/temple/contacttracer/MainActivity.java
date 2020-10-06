@@ -65,11 +65,15 @@ import java.util.Set;
 
 public class MainActivity extends AppCompatActivity implements StartupFragment.StartupFragmentListener, SettingsFragment.SettingsListener, DatePickerFragment.DateSelectedListener {
     Fragment startupFragment;
+
+    //Used to listen for app preference changes made by user
     SharedPreferences preferences;
     SharedPreferences.OnSharedPreferenceChangeListener listener;
 
+    //Used to interact with location service
     TracerService.TracerServiceBinder lsBinder;
 
+    //Receives local broadcasts from FCM messaging service telling it to display the trace fragment
     BroadcastReceiver br = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -101,6 +105,7 @@ public class MainActivity extends AppCompatActivity implements StartupFragment.S
             requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 111);
         }
 
+        //Subscribes to both topics on FCM server
         FirebaseMessaging.getInstance().subscribeToTopic("TRACKING")
                 .addOnCompleteListener(new OnCompleteListener<Void>() {
                     @Override
@@ -124,29 +129,14 @@ public class MainActivity extends AppCompatActivity implements StartupFragment.S
                     }
                 });
 
+        //Creates the notification channel used by Tracing service
         NotificationManager nm = getSystemService(NotificationManager.class);
         NotificationChannel channel = new NotificationChannel(getString(R.string.LocationChannelID), "All Notifications", NotificationManager.IMPORTANCE_HIGH);
         nm.createNotificationChannel(channel);
 
         makePreferenceListener();
 
-        /*
-        JSONObject contact = new JSONObject();
-        try {
-            contact.put("latitude", 39.960935);
-            contact.put("longitude", -75.390174);
-            contact.put("sedentary_begin", System.currentTimeMillis());
-            TraceFragment traceFragment = TraceFragment.newInstance(contact);
-
-            getSupportFragmentManager()
-                    .beginTransaction()
-                    .add(R.id.fragmentContainer, traceFragment)
-                    .commit();
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
-         */
-
+        //Creates startup fragment and populates it into main activity
         startupFragment = getSupportFragmentManager().findFragmentById(R.id.fragmentContainer);
         if(!(startupFragment instanceof StartupFragment)){
             startupFragment = StartupFragment.newInstance();
@@ -157,6 +147,7 @@ public class MainActivity extends AppCompatActivity implements StartupFragment.S
         }
     }
 
+    //Creates Options Menu from XML
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         MenuInflater inflater = getMenuInflater();
@@ -164,6 +155,7 @@ public class MainActivity extends AppCompatActivity implements StartupFragment.S
         return true;
     }
 
+    //Opens settings fragment if user clicks on settings icon and that fragment is not already displayed
     @Override
     public boolean onOptionsItemSelected(@NonNull MenuItem item) {
         if(item.getItemId() == R.id.settings) {
@@ -181,6 +173,7 @@ public class MainActivity extends AppCompatActivity implements StartupFragment.S
         return super.onOptionsItemSelected(item);
     }
 
+    //Creates listener that reacts to any changes to app preferences by the user
     public void makePreferenceListener(){
         preferences = PreferenceManager.getDefaultSharedPreferences(this);
         listener = new SharedPreferences.OnSharedPreferenceChangeListener() {
@@ -201,10 +194,13 @@ public class MainActivity extends AppCompatActivity implements StartupFragment.S
         preferences.registerOnSharedPreferenceChangeListener(listener);
     }
 
+    //Checks if user has granted permission to track location
     private boolean checkPermission(){
         return (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED);
     }
 
+    //If user has not granted permission to track location, they are alerted this app is unusable
+    //without it and the app closes
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         if(grantResults[0] != PackageManager.PERMISSION_GRANTED){
@@ -213,6 +209,8 @@ public class MainActivity extends AppCompatActivity implements StartupFragment.S
         }
     }
 
+    //Starts the tracing service and then binds to it
+    //Both are called to ensure that tracing service can still run even if Main Activity is closed
     @Override
     public void startServiceButtonPressed() {
         //start foreground service
@@ -223,6 +221,8 @@ public class MainActivity extends AppCompatActivity implements StartupFragment.S
         bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE);
     }
 
+    //Used to establish connection with Tracer Service and display notification required to
+    //run the service in the foreground
     private ServiceConnection serviceConnection = new ServiceConnection() {
         @Override
         public void onServiceConnected(ComponentName name, IBinder service) {
@@ -236,11 +236,14 @@ public class MainActivity extends AppCompatActivity implements StartupFragment.S
         }
     };
 
+    //Rebinds to location service if running
+    //Alerts Application context that Main Activity is now visible
+    //Registers local broadcast receiver
     @Override
     protected void onResume() {
         super.onResume();
         Intent intent = new Intent(this, TracerService.class);
-        bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE);
+        bindService(intent, serviceConnection, 0);
 
         ((UUIDtracker)getApplicationContext()).nowInForeground();
 
@@ -249,6 +252,9 @@ public class MainActivity extends AppCompatActivity implements StartupFragment.S
         LocalBroadcastManager.getInstance(this).registerReceiver(br, filter);
     }
 
+    //Unbinds to tracer service
+    //Alerts application context that main activity is no longer visible
+    //Unregisters broadcast reciever
     @Override
     protected void onPause() {
         super.onPause();
@@ -259,6 +265,7 @@ public class MainActivity extends AppCompatActivity implements StartupFragment.S
         LocalBroadcastManager.getInstance(this).unregisterReceiver(br);
     }
 
+    //Stops the tracer service by making a call to stop foreground service and unbinding to it
     @Override
     public void stopServiceButtonPressed() {
         //stop foreground service
@@ -270,12 +277,7 @@ public class MainActivity extends AppCompatActivity implements StartupFragment.S
         Log.d("Main", "Stop Service Button Pressed");
     }
 
-    @Override
-    public void positiveTestButtonPressed() {
-        DialogFragment datePicker = new DatePickerFragment();
-        datePicker.show(getSupportFragmentManager(), "datePicker");
-    }
-
+    //Manually generates a new UUID for the user
     @Override
     public void generateUUID() {
         Log.d("Main", "New UUID generated");
@@ -283,6 +285,16 @@ public class MainActivity extends AppCompatActivity implements StartupFragment.S
         application.addID();
     }
 
+    //Displays date picker for user to select which date they tested positive on
+    @Override
+    public void positiveTestButtonPressed() {
+        DialogFragment datePicker = new DatePickerFragment();
+        datePicker.show(getSupportFragmentManager(), "datePicker");
+    }
+
+    //Once user has selected a date they tested positive on, application will upload to server
+    //the date they tested positive on in milliseconds as well as all of the stored UUID's for
+    //when the user was at rest for longer than SEDENTARY_TIME
     @Override
     public void dateSelected(final long time) {
         RequestQueue queue = Volley.newRequestQueue(this);

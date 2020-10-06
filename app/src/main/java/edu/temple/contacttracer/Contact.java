@@ -5,6 +5,7 @@ import org.json.JSONObject;
 
 import java.io.Serializable;
 
+//Container for JSONObject data fields that can be printed to file
 public class Contact implements Serializable {
     private String id;
     private double latitude;

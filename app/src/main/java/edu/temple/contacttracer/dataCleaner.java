@@ -9,6 +9,7 @@ import androidx.work.WorkerParameters;
 
 import java.util.Set;
 
+//Worker that only calls the cleanData() method found in ContactTracerApplicationContext
 public class dataCleaner extends Worker {
     public dataCleaner(@NonNull Context context, @NonNull WorkerParameters workerParams) {
         super(context, workerParams);

@@ -10,6 +10,10 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 
+//Fragment that contains 3 buttons
+//Start Service communicates to attached activity that a service should be started
+//Stop Service communicates to attached activity that a service should be stopped
+//Positive COVID Test communicates to attached activity to prompt user for when they test positive
 public class StartupFragment extends Fragment {
     private StartupFragmentListener mListener;
 

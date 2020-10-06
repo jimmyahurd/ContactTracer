@@ -22,7 +22,11 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
+//Used to share data between different components
+//Also handles logic dealing with adding and removing from data
+//Reads and writes data to file
 public class ContactTracerApplicationContext extends Application implements UUIDtracker{
+    //List of data that needs to be tracked by the application
     protected Set<UUID> UUIDs;
     protected UUID currentID;
     protected Set<String> ids;
@@ -30,14 +34,20 @@ public class ContactTracerApplicationContext extends Application implements UUID
     protected Set<myLocation> myLocations;
     protected float TRACING_DISTANCE;
     protected long SEDENTARY_TIME;
+
+    //Current location of user
     protected Location currentLocation;
 
+    //Used to know if Main Activity is visible
     private boolean inForeground = false;
 
     @Override
     public void onCreate() {
         super.onCreate();
         readFromFile();
+
+        //Creates a worker that will periodically clean some of the data list above
+        //see cleanData() for more information
         PeriodicWorkRequest dataCleaning =
                 new PeriodicWorkRequest.Builder(dataCleaner.class,
                         1, TimeUnit.DAYS).build();
@@ -47,9 +57,12 @@ public class ContactTracerApplicationContext extends Application implements UUID
                 dataCleaning);
     }
 
+    //Used to read in data from a file
+    //Called whenever application is recreated
     public void readFromFile() {
         File file = new File(getFilesDir(), getString(R.string.DataFileName));
         if(file.length() == 0){
+            //Initializes all the data fields as user has never used this application before
             Log.d("Application Context", "Created first UUID");
             currentID = new UUID();
             UUIDs = new HashSet<>();
@@ -87,6 +100,8 @@ public class ContactTracerApplicationContext extends Application implements UUID
         Log.d("Application Context", "Have " + UUIDs.size() + " UUIDs");
     }
 
+    //Writes all data to the file
+    //Called anytime data is changed
     public void writeToFile(){
         File file = new File(getFilesDir(), getString(R.string.DataFileName));
         try {
@@ -105,6 +120,8 @@ public class ContactTracerApplicationContext extends Application implements UUID
         }
     }
 
+    //Adds an ID to user's set of their own UUID's
+    //Updates current ID
     @Override
     public void addID() {
         currentID = new UUID();
@@ -113,16 +130,21 @@ public class ContactTracerApplicationContext extends Application implements UUID
         writeToFile();
     }
 
+    //Returns set of User's UUID's
     @Override
     public Set<UUID> getIDs() {
         return UUIDs;
     }
 
+    //Returns the User's current UUID
     @Override
     public String getCurrentID(){
         return currentID.getID();
     }
 
+    //Checks contact to see if they are not the user and that they are close enough for exposure
+    //Adds contact to set if both criteria are met
+    //Returns true if contact was added, false if contact was not added
     @Override
     public boolean addContact(JSONObject contact) throws JSONException {
         if(checkContact(contact)) {
@@ -136,6 +158,7 @@ public class ContactTracerApplicationContext extends Application implements UUID
         }
     }
 
+    //Performs check for above method
     private boolean checkContact(JSONObject location) throws JSONException {
         if(currentLocation == null) {
             Log.d("Application Context", "Unable to track current location");
@@ -162,6 +185,7 @@ public class ContactTracerApplicationContext extends Application implements UUID
         return false;
     }
 
+    //Returns the set of contacts the User has had
     @Override
     public Set<JSONObject> getContacts() throws JSONException {
         Set<JSONObject> newContacts = new HashSet<>();
@@ -171,6 +195,11 @@ public class ContactTracerApplicationContext extends Application implements UUID
         return newContacts;
     }
 
+    //Checks if the user has come into contact with any of the passed id's
+    //If user has come into contact with one, it will immediately return the corresponding
+    //contact JSONObject
+    //If user has not come into contact with any or if the id's are from the user, then it will
+    //return a null object
     @Override
     public JSONObject checkContacts(JSONArray ids) throws JSONException {
         if(this.ids.contains(ids.getString(0))){
@@ -189,38 +218,46 @@ public class ContactTracerApplicationContext extends Application implements UUID
         return null;
     }
 
+    //Changes Tracing Distance
     @Override
     public void setTracingDistance(float distance) {
         TRACING_DISTANCE = distance;
         writeToFile();
     }
 
+    //Returns Tracing Distance
     @Override
     public float getTracingDistance() {
         return TRACING_DISTANCE;
     }
 
+    //Changes Sedentary Time
     @Override
     public void setSedentaryTime(long sedentaryTime) {
         SEDENTARY_TIME = sedentaryTime;
         writeToFile();
     }
 
+    //Returns Sedentary Time
     @Override
     public long getSedentaryTime() {
         return SEDENTARY_TIME;
     }
 
+    //Updates user's current location
     @Override
     public void setCurrentLocation(Location location) {
         currentLocation = location;
     }
 
+    //Returns User's current location
     @Override
     public Location getCurrentLocation() {
         return currentLocation;
     }
 
+    //Adds location where user was at rest for a while
+    //Only called when user has not moved for SEDENTARY_TIME
     @Override
     public void addLocation(Location location) {
         if(myLocations == null)
@@ -229,11 +266,15 @@ public class ContactTracerApplicationContext extends Application implements UUID
         writeToFile();
     }
 
+    //Returns set of locations where user was at rest for a while
     @Override
     public Set<myLocation> getMyLocations(){
         return myLocations;
     }
 
+    //Cleans the data by removing old UUID's and old myLocation's (defined as ones older than 14 days)
+    //Also generates a new UUID
+    //Code runs ~24 hours
     @Override
     public void cleanData(){
         readFromFile();
@@ -248,16 +289,19 @@ public class ContactTracerApplicationContext extends Application implements UUID
         addID(); //method will write all changes to file
     }
 
+    //Updates application that main activity is visible
     @Override
     public void nowInForeground() {
         inForeground = true;
     }
 
+    //Updates application that main activity is not visible
     @Override
     public void outOfForeground() {
         inForeground = false;
     }
 
+    //Returns if main activity is visible
     @Override
     public boolean inForeground() {
         return inForeground;

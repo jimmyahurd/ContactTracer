@@ -5,6 +5,8 @@ import org.json.JSONObject;
 
 import java.io.Serializable;
 
+//Container for a UUID String and time of creation
+//Has method to tell if UUID is too old, and should thus be discarded
 public class UUID implements Serializable {
     private final String IDKEY = "ID";
     private final String CREATEDKEY = "Created";
@@ -16,27 +18,11 @@ public class UUID implements Serializable {
         created = System.currentTimeMillis();
     }
 
-    public UUID(JSONObject jsonObject) throws JSONException {
-        id = jsonObject.getString(IDKEY);
-        created = jsonObject.getLong(CREATEDKEY);
-    }
-
     public boolean olderThan14Days(){
         return created < (System.currentTimeMillis() - (14*24*60*60*1000));
     }
 
-    public boolean youngerThan1Day(){
-        return created > (System.currentTimeMillis() - (1*24*60*60*1000));
-    }
-
     public String getID(){
         return id;
-    }
-
-    public JSONObject toJSON() throws JSONException {
-        JSONObject toReturn = new JSONObject();
-        toReturn.put(IDKEY, id);
-        toReturn.put(CREATEDKEY, created);
-        return toReturn;
     }
 }
