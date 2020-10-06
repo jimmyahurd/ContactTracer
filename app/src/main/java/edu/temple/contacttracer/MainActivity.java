@@ -12,12 +12,15 @@ import android.Manifest;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
+import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.location.Location;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.os.PersistableBundle;
@@ -40,6 +43,7 @@ import com.google.firebase.messaging.FirebaseMessaging;
 
 import org.json.JSONArray;
 import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -64,6 +68,27 @@ public class MainActivity extends AppCompatActivity implements StartupFragment.S
     SharedPreferences.OnSharedPreferenceChangeListener listener;
 
     TracerService.TracerServiceBinder lsBinder;
+
+    BroadcastReceiver br = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            try {
+                JSONObject contact = new JSONObject(intent.getStringExtra(getString(R.string.IntentContactExtra)));
+                double latitude = contact.getDouble(getString(R.string.PayloadLatitude));
+                double longitude = contact.getDouble(getString(R.string.PayloadLongitude));
+                Log.d("Main Activity", "Received Contact at (" + latitude + ", " + longitude + ")");
+                //display contact fragment
+                TraceFragment traceFragment = TraceFragment.newInstance(contact);
+                getSupportFragmentManager()
+                        .beginTransaction()
+                        .add(R.id.fragmentContainer, traceFragment)
+                        .addToBackStack(null)
+                        .commit();
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+        }
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -103,6 +128,23 @@ public class MainActivity extends AppCompatActivity implements StartupFragment.S
 
         makePreferenceListener();
 
+        /*
+        JSONObject contact = new JSONObject();
+        try {
+            contact.put("latitude", 39.960935);
+            contact.put("longitude", -75.390174);
+            contact.put("sedentary_begin", System.currentTimeMillis());
+            TraceFragment traceFragment = TraceFragment.newInstance(contact);
+
+            getSupportFragmentManager()
+                    .beginTransaction()
+                    .add(R.id.fragmentContainer, traceFragment)
+                    .commit();
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+         */
+
         startupFragment = getSupportFragmentManager().findFragmentById(R.id.fragmentContainer);
         if(!(startupFragment instanceof StartupFragment)){
             startupFragment = StartupFragment.newInstance();
@@ -123,12 +165,15 @@ public class MainActivity extends AppCompatActivity implements StartupFragment.S
     @Override
     public boolean onOptionsItemSelected(@NonNull MenuItem item) {
         if(item.getItemId() == R.id.settings) {
-            Fragment settings = new SettingsFragment();
-            getSupportFragmentManager()
-                    .beginTransaction()
-                    .replace(R.id.fragmentContainer, settings)
-                    .addToBackStack(null)
-                    .commit();
+            Fragment settings = getSupportFragmentManager().findFragmentById(R.id.fragmentContainer);
+            if(!(settings instanceof SettingsFragment)) {
+                settings = new SettingsFragment();
+                getSupportFragmentManager()
+                        .beginTransaction()
+                        .replace(R.id.fragmentContainer, settings)
+                        .addToBackStack(null)
+                        .commit();
+            }
             return true;
         }
         return super.onOptionsItemSelected(item);
@@ -194,6 +239,10 @@ public class MainActivity extends AppCompatActivity implements StartupFragment.S
         super.onResume();
         Intent intent = new Intent(this, TracerService.class);
         bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE);
+        ((UUIDtracker)getApplicationContext()).inForeground();
+        IntentFilter filter = new IntentFilter();
+        filter.addAction(getString(R.string.IntentDisplayContact));
+        registerReceiver(br, filter);
     }
 
     @Override
@@ -201,6 +250,8 @@ public class MainActivity extends AppCompatActivity implements StartupFragment.S
         super.onPause();
         if(lsBinder != null)
             unbindService(serviceConnection);
+        ((UUIDtracker)getApplicationContext()).outOfForeground();
+        unregisterReceiver(br);
     }
 
     @Override

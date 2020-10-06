@@ -18,4 +18,7 @@
     <string name="PayloadLongitude">longitude</string>
     <string name="PayloadTimeBegin">sedentary_begin</string>
     <string name="PayloadTimeEnd">sedentary_end</string>
+
+    <string name="IntentContactExtra">contact</string>
+    <string name="IntentDisplayContact">display</string>
 </resources>

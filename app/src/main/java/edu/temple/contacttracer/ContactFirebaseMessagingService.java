@@ -10,6 +10,7 @@ import androidx.annotation.NonNull;
 import com.google.firebase.messaging.FirebaseMessagingService;
 import com.google.firebase.messaging.RemoteMessage;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -35,6 +36,20 @@ public class ContactFirebaseMessagingService extends FirebaseMessagingService {
             try {
                 JSONObject payload = new JSONObject(remoteMessage.getData().get("payload"));
                 Log.d("FCM", "Received " + payload + " from server");
+                JSONArray ids = payload.getJSONArray("uuids");
+                UUIDtracker application = (UUIDtracker) getApplicationContext();
+                JSONObject contact;
+                if((contact = application.checkContacts(ids)) != null){
+                    if(application.inForeground()){
+                        //broadcast to main activity
+                        Intent intent = new Intent(this, MainActivity.class);
+                        intent.putExtra(getString(R.string.IntentContactExtra), contact.toString());
+                        intent.setAction(getString(R.string.IntentDisplayContact));
+                        sendBroadcast(intent);
+                    }else{
+                        //notification
+                    }
+                }
             } catch (JSONException e) {
                 e.printStackTrace();
             }

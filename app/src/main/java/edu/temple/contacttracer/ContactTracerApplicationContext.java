@@ -8,6 +8,7 @@ import androidx.work.ExistingPeriodicWorkPolicy;
 import androidx.work.PeriodicWorkRequest;
 import androidx.work.WorkManager;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -30,6 +31,8 @@ public class ContactTracerApplicationContext extends Application implements UUID
     protected float TRACING_DISTANCE;
     protected long SEDENTARY_TIME;
     protected Location currentLocation;
+
+    private boolean inForeground = false;
 
     @Override
     public void onCreate() {
@@ -122,6 +125,8 @@ public class ContactTracerApplicationContext extends Application implements UUID
 
     @Override
     public boolean addContact(JSONObject contact) throws JSONException {
+        if(contacts.isEmpty())
+            contacts.add(contact);
         if(checkContact(contact)) {
             if(contacts == null)
                 contacts = new HashSet<>();
@@ -162,6 +167,24 @@ public class ContactTracerApplicationContext extends Application implements UUID
     @Override
     public Set<JSONObject> getContacts() {
         return contacts;
+    }
+
+    @Override
+    public JSONObject checkContacts(JSONArray ids) throws JSONException {
+        if(this.ids.contains(ids.getString(0))){
+            Log.d("Application Context", "Message ignored as sent by me");
+        }
+        for(JSONObject contact: contacts){
+            String contactID = contact.getString(getString(R.string.PayloadUUID));
+            for(int i = 0; i < ids.length(); i++){
+                if(contactID.equals(ids.getString(i))){
+                    Log.d("Application Context", "Possible Exposure!");
+                    return contact;
+                }
+            }
+        }
+        Log.d("Application Context", "Never came in contact with this person");
+        return null;
     }
 
     @Override
@@ -221,5 +244,20 @@ public class ContactTracerApplicationContext extends Application implements UUID
                 myLocations.remove(location);
         }
         addID(); //method will write all changes to file
+    }
+
+    @Override
+    public void nowInForeground() {
+        inForeground = true;
+    }
+
+    @Override
+    public void outOfForeground() {
+        inForeground = false;
+    }
+
+    @Override
+    public boolean inForeground() {
+        return inForeground;
     }
 }
