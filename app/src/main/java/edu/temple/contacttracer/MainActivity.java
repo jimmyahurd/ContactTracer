@@ -84,12 +84,7 @@ public class MainActivity extends AppCompatActivity implements StartupFragment.S
                 double longitude = contact.getDouble(getString(R.string.PayloadLongitude));
                 Log.d("Main Activity", "Received Contact at (" + latitude + ", " + longitude + ")");
                 //display contact fragment
-                TraceFragment traceFragment = TraceFragment.newInstance(contact);
-                getSupportFragmentManager()
-                        .beginTransaction()
-                        .add(R.id.fragmentContainer, traceFragment)
-                        .addToBackStack(null)
-                        .commit();
+                displayTraceFragment(contact);
             } catch (JSONException e) {
                 e.printStackTrace();
             }
@@ -138,13 +133,40 @@ public class MainActivity extends AppCompatActivity implements StartupFragment.S
 
         //Creates startup fragment and populates it into main activity
         startupFragment = getSupportFragmentManager().findFragmentById(R.id.fragmentContainer);
-        if(!(startupFragment instanceof StartupFragment)){
+        if (!(startupFragment instanceof StartupFragment)) {
             startupFragment = StartupFragment.newInstance();
             getSupportFragmentManager()
                     .beginTransaction()
                     .add(R.id.fragmentContainer, startupFragment)
                     .commit();
         }
+
+        //checks if activity was started by an intent
+        Intent intent = getIntent();
+        String action = intent.getAction();
+        Log.d("Main Activity", action);
+        if(intent != null && action.equals(getString(R.string.IntentDisplayContact))) {
+            Log.d("Main Activity", "Starting with trace fragment");
+            try {
+                //Pulls contact from intent
+                JSONObject contact = new JSONObject(intent.getStringExtra(getString(R.string.IntentContactExtra)));
+                //Displays trace fragment and adds to backstack, allowing user to go back to main screen
+                displayTraceFragment(contact);
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+        }else{
+            Log.d("Main Activity", "Started normally");
+        }
+    }
+
+    private void displayTraceFragment(JSONObject contact) throws JSONException {
+        TraceFragment traceFragment = TraceFragment.newInstance(contact);
+        getSupportFragmentManager()
+                .beginTransaction()
+                .replace(R.id.fragmentContainer, traceFragment)
+                .addToBackStack(null)
+                .commit();
     }
 
     //Creates Options Menu from XML

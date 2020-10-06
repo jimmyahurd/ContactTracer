@@ -16,6 +16,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InvalidClassException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.util.HashSet;
@@ -91,10 +92,10 @@ public class ContactTracerApplicationContext extends Application implements UUID
                 inputStream.close();
             } catch (IOException e) {
                 e.printStackTrace();
-            } catch (ClassNotFoundException e) {
-                e.printStackTrace();
                 file.delete();
                 Log.e("Application Context", "file deleted");
+            } catch (ClassNotFoundException e) {
+                e.printStackTrace();
             }
         }
         Log.d("Application Context", "Have " + UUIDs.size() + " UUIDs");
@@ -204,6 +205,14 @@ public class ContactTracerApplicationContext extends Application implements UUID
     public JSONObject checkContacts(JSONArray ids) throws JSONException {
         if(this.ids.contains(ids.getString(0))){
             Log.d("Application Context", "Message ignored as sent by me");
+            /*
+            if(!contacts.isEmpty()){
+                Log.d("Application Context", "Sending fake contact");
+                for(Contact contact : contacts)
+                    return contact.toJSON();
+            }
+             */
+            return null;
         }
         for(Contact contact : contacts){
             String contactID = contact.toJSON().getString(getString(R.string.PayloadUUID));
@@ -248,6 +257,20 @@ public class ContactTracerApplicationContext extends Application implements UUID
     @Override
     public void setCurrentLocation(Location location) {
         currentLocation = location;
+
+        if(contacts.isEmpty()){
+            JSONObject contact = new JSONObject();
+            try {
+                contact.put(getString(R.string.PayloadUUID), currentID.getID());
+                contact.put(getString(R.string.PayloadLatitude), currentLocation.getLatitude());
+                contact.put(getString(R.string.PayloadLongitude), currentLocation.getLongitude());
+                contact.put(getString(R.string.PayloadTimeBegin), System.currentTimeMillis());
+                contact.put(getString(R.string.PayloadTimeEnd), System.currentTimeMillis() + 1);
+                contacts.add(new Contact(contact));
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+        }
     }
 
     //Returns User's current location
